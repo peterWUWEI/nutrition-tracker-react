@@ -1,0 +1,27 @@
+// Prisma schema: defines the database tables and generates a typed client.
+// After changing models, create a migration with `npm run db:migrate -- --name <change>`.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Example resource to show the full stack working end to end.
+model Food {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  calories  Int
+  protein   Float    @default(0) // grams
+  carbs     Float    @default(0) // grams
+  fat       Float    @default(0) // grams
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("foods")
+}

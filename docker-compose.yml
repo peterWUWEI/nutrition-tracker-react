@@ -1,0 +1,65 @@
+# Development stack: PostgreSQL database + Express API + React client.
+#
+#   docker compose up --build     start everything (http://localhost:5173)
+#   docker compose down           stop everything (add -v to also delete the database)
+#
+# Values like ${POSTGRES_USER:-nutrition} can be overridden in a .env file next to this one
+# (see .env.example); otherwise the defaults after ":-" are used.
+
+name: nutrition-tracker
+
+services:
+  nutrition-tracker-db:
+    image: postgres:18-alpine
+    container_name: nutrition-tracker-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nutrition}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nutrition}
+      POSTGRES_DB: ${POSTGRES_DB:-nutrition_tracker}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      # PostgreSQL 18+ images keep their data under /var/lib/postgresql.
+      - nutrition-tracker-db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  nutrition-tracker-server:
+    build: ./nutrition-tracker-server
+    container_name: nutrition-tracker-server
+    init: true # forwards Ctrl+C / docker stop signals to Node
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nutrition}:${POSTGRES_PASSWORD:-nutrition}@nutrition-tracker-db:5432/${POSTGRES_DB:-nutrition_tracker}
+      PORT: 4000
+      CORS_ORIGIN: http://localhost:${CLIENT_PORT:-5173}
+    ports:
+      - "${SERVER_PORT:-4000}:4000"
+    volumes:
+      # Mount the source for hot reload; keep the container's own node_modules.
+      - ./nutrition-tracker-server:/app
+      - /app/node_modules
+    depends_on:
+      nutrition-tracker-db:
+        condition: service_healthy
+
+  nutrition-tracker-client:
+    build: ./nutrition-tracker-client
+    container_name: nutrition-tracker-client
+    init: true
+    environment:
+      # Vite forwards /api requests to the server container (see vite.config.ts).
+      API_PROXY_TARGET: http://nutrition-tracker-server:4000
+    ports:
+      - "${CLIENT_PORT:-5173}:5173"
+    volumes:
+      - ./nutrition-tracker-client:/app
+      - /app/node_modules
+    depends_on:
+      - nutrition-tracker-server
+
+volumes:
+  nutrition-tracker-db-data:
