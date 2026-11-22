@@ -1,5 +1,6 @@
 // Prisma schema: defines the database tables and generates a typed client.
 // After changing models, create a migration with `npm run db:migrate -- --name <change>`.
+// The full API contract is in docs/api-spec.md.
 
 generator client {
   provider            = "prisma-client"
@@ -12,16 +13,78 @@ datasource db {
   provider = "postgresql"
 }
 
-// Example resource to show the full stack working end to end.
+enum FoodType {
+  food
+  beverage
+
+  @@map("food_type")
+}
+
+enum ServingUnit {
+  gram // for type = food
+  ml // for type = beverage
+
+  @@map("serving_unit")
+}
+
+// A food or beverage. All nutrition values are per serving.
 model Food {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(100)
-  calories  Int
-  protein   Float    @default(0) // grams
-  carbs     Float    @default(0) // grams
-  fat       Float    @default(0) // grams
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                 Int         @id @default(autoincrement())
+  name               String      @db.VarChar(100) // unique ignoring letter case (checked in the API)
+  type               FoodType
+  servingSize        Float       @map("serving_size")
+  servingUnit        ServingUnit @map("serving_unit")
+  servingsPerPackage Float?      @map("servings_per_package")
+  energyInKcal       Float       @map("energy_in_kcal")
+  proteinInGram      Float       @map("protein_in_gram")
+  carbsInGram        Float       @map("carbs_in_gram")
+  fatInGram          Float       @map("fat_in_gram")
+  sodiumInMg         Float?      @map("sodium_in_mg")
+  cholesterolInMg    Float?      @map("cholesterol_in_mg")
+  dietaryFibreInGram Float?      @map("dietary_fibre_in_gram")
+  brand              String?     @db.VarChar(100)
+  pictureUrl         String      @map("picture_url") // e.g. /uploads/foods/<file>.png
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+  mealItems          MealItem[]
 
   @@map("foods")
+}
+
+enum MealTitle {
+  breakfast
+  lunch
+  dinner
+  snacks
+  others
+
+  @@map("meal_title")
+}
+
+// A meal eaten at a moment in time, made of one or more foods.
+// It can be changed or deleted only within 48 hours of eatenAt (checked in the API).
+model Meal {
+  id        Int        @id @default(autoincrement())
+  title     MealTitle
+  eatenAt   DateTime   @map("eaten_at")
+  items     MealItem[]
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  @@index([eatenAt])
+  @@map("meals")
+}
+
+// One food in a meal and how many servings of it were eaten.
+model MealItem {
+  id               Int   @id @default(autoincrement())
+  mealId           Int   @map("meal_id")
+  foodId           Int   @map("food_id")
+  quantityConsumed Float @map("quantity_consumed") // number of servings
+  // Deleting a meal deletes its items; a food that is in a meal can't be deleted.
+  meal             Meal  @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  food             Food  @relation(fields: [foodId], references: [id], onDelete: Restrict)
+
+  @@unique([mealId, foodId]) // each food at most once per meal
+  @@map("meal_items")
 }
