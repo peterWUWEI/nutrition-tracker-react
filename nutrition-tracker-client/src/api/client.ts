@@ -14,9 +14,12 @@ export class ApiError extends Error {
 
 // Small wrapper around fetch that sends/receives JSON and throws on errors.
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  // JSON bodies need a JSON content type. For FormData (file uploads) the browser sets the
+  // multipart content type itself, including the boundary between the parts.
+  const isFormData = init?.body instanceof FormData
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: isFormData ? init?.headers : { 'Content-Type': 'application/json', ...init?.headers },
   })
 
   if (!response.ok) {

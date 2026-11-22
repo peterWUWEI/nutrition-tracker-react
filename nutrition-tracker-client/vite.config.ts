@@ -16,6 +16,11 @@ export default defineConfig({
         target: apiProxyTarget,
         changeOrigin: true,
       },
+      // Uploaded pictures are served by the API server too.
+      '/uploads': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
     },
   },
 })
