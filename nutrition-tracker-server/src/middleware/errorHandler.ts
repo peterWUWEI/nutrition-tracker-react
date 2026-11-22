@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express'
+import multer from 'multer'
 import { ZodError } from 'zod'
 
 import { Prisma } from '../generated/prisma/client.js'
@@ -32,6 +33,16 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
 
   if (err instanceof HttpError) {
     res.status(err.status).json({ error: err.message })
+    return
+  }
+
+  // Upload problems found while reading a multipart request (see uploadPicture.ts).
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      res.status(413).json({ error: 'picture must be 5 MB or smaller' })
+    } else {
+      res.status(400).json({ error: `${err.field ?? 'upload'}: ${err.message}` })
+    }
     return
   }
 

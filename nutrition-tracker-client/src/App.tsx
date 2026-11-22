@@ -1,31 +1,12 @@
-import RestaurantIcon from '@mui/icons-material/Restaurant'
-import AppBar from '@mui/material/AppBar'
-import Box from '@mui/material/Box'
-import Container from '@mui/material/Container'
-import Toolbar from '@mui/material/Toolbar'
-import Typography from '@mui/material/Typography'
+import { createBrowserRouter } from 'react-router'
+import { RouterProvider } from 'react-router/dom'
 
-import ServerStatus from './components/ServerStatus.tsx'
-import FoodsPage from './pages/FoodsPage.tsx'
+import { routes } from './routes.tsx'
+
+const router = createBrowserRouter(routes)
 
 function App() {
-  return (
-    <Box sx={{ minHeight: '100vh' }}>
-      <AppBar position="static">
-        <Toolbar>
-          <RestaurantIcon sx={{ mr: 1 }} />
-          <Typography variant="h6" component="h1" sx={{ flexGrow: 1 }}>
-            Nutrition Tracker
-          </Typography>
-          <ServerStatus />
-        </Toolbar>
-      </AppBar>
-
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <FoodsPage />
-      </Container>
-    </Box>
-  )
+  return <RouterProvider router={router} />
 }
 
 export default App
